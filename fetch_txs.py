@@ -1,5 +1,6 @@
 import click
 import csv
+import json
 import os
 import requests
 
@@ -9,8 +10,8 @@ import requests
     "--output",
     "-o",
     required=True,
-    type=click.Path(dir_okay=False),
-    help="output path",
+    type=click.Path(file_okay=False),
+    help="output directory",
 )
 @click.option("--start", "-s", default=-1, help="start block number (inclusive)")
 @click.option("--num", "-n", default=1, help="number of blocks to scrape")
@@ -18,43 +19,31 @@ import requests
 @click.pass_context
 def main(ctx, output, start, num, rpc_url):
     """Fetch the hashes of all transactions in a range of blocks."""
-    if os.path.exists(output):
-        ctx.fail("output file already exists")
+    if not os.path.exists(output):
+        ctx.fail("output directory does not exist")
 
     current_block = fetch_current_block(rpc_url=rpc_url)
     if start < 0:
         start = current_block + start
     end = min(start + num, current_block)
 
-    print(f"fetching transaction hashes in {num} blocks from #{start} to #{end}...")
+    print(f"fetching {num} blocks from #{start} to #{end}...")
 
-    annotated_hashes = []
-    for n in range(start, end):
-        tx_hashes = fetch_tx_hashes(n, rpc_url=rpc_url)
-        new_annotated_hashes = [[n, i, h] for i, h in enumerate(tx_hashes)]
-        annotated_hashes += new_annotated_hashes
-
-    print(f"fetching {len(annotated_hashes)} transactions...")
-
-    lines = []
-    for n, i, tx_hash in annotated_hashes:
-        tx = fetch_tx(tx_hash, rpc_url)
-        lines.append((n, i, "0x" + tx_hash.hex(), tx["from"], tx["to"]))
+    with ProgressPrinter(num) as p:
+        for n in range(start, end):
+            p.update(n - start)
+            block = fetch_block(n, rpc_url=rpc_url)
+            file_path = os.path.join(output, f"{n}.json")
+            with open(file_path, "w") as f:
+                json.dump(block, f)
+        p.update(num)
 
     print("done")
 
-    with open(output, "w") as f:
-        writer = csv.writer(f)
-        writer.writerow(["block,tx_index,tx_hash,from,to"])
-        for line in lines:
-            writer.writerow(line)
 
-
-def fetch_tx_hashes(n, rpc_url):
-    r = request(rpc_url, "eth_getBlockByNumber", [hex(n), False])
-    tx_hashes_hex = r["result"]["transactions"]
-    tx_hashes_bytes = [bytes.fromhex(h[2:]) for h in tx_hashes_hex]
-    return tx_hashes_bytes
+def fetch_block(n, rpc_url):
+    r = request(rpc_url, "eth_getBlockByNumber", [hex(n), True])
+    return r["result"]
 
 
 def fetch_current_block(rpc_url):
@@ -63,16 +52,29 @@ def fetch_current_block(rpc_url):
     return n
 
 
-def fetch_tx(tx_hash, rpc_url):
-    r = request(rpc_url, "eth_getTransactionByHash", ["0x" + tx_hash.hex()])
-    return r["result"]
-
-
 def request(rpc_url, method, params=None):
     return requests.post(
         rpc_url,
         json={"jsonrpc_url": "2.0", "method": method, "params": params or [], "id": 0},
     ).json()
+
+
+class ProgressPrinter:
+    def __init__(self, n):
+        self.n = n
+
+    def update(self, i):
+        s = f"{i / self.n * 100:.1f}% ({i} of {self.n})"
+        print("\r" + s + "\033[K", end="")
+
+    def print(self, s):
+        print("\n" + s)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _1, _2, _3):
+        print("", end="\n")
 
 
 if __name__ == "__main__":
