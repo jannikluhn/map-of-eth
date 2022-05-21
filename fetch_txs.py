@@ -26,14 +26,26 @@ def main(ctx, output, start, num, rpc_url):
         start = current_block + start
     end = min(start + num, current_block)
 
-    lines = []
+    print(f"fetching transaction hashes in {num} blocks from #{start} to #{end}...")
+
+    annotated_hashes = []
     for n in range(start, end):
         tx_hashes = fetch_tx_hashes(n, rpc_url=rpc_url)
-        new_lines = [[n, i, "0x" + h.hex()] for i, h in enumerate(tx_hashes)]
-        lines += new_lines
+        new_annotated_hashes = [[n, i, h] for i, h in enumerate(tx_hashes)]
+        annotated_hashes += new_annotated_hashes
+
+    print(f"fetching {len(annotated_hashes)} transactions...")
+
+    lines = []
+    for n, i, tx_hash in annotated_hashes:
+        tx = fetch_tx(tx_hash, rpc_url)
+        lines.append((n, i, "0x" + tx_hash.hex(), tx["from"], tx["to"]))
+
+    print("done")
 
     with open(output, "w") as f:
         writer = csv.writer(f)
+        writer.writerow(["block,tx_index,tx_hash,from,to"])
         for line in lines:
             writer.writerow(line)
 
@@ -49,6 +61,11 @@ def fetch_current_block(rpc_url):
     r = request(rpc_url, "eth_blockNumber")
     n = int(r["result"], 16)
     return n
+
+
+def fetch_tx(tx_hash, rpc_url):
+    r = request(rpc_url, "eth_getTransactionByHash", ["0x" + tx_hash.hex()])
+    return r["result"]
 
 
 def request(rpc_url, method, params=None):
