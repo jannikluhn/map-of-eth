@@ -61,11 +61,15 @@ def main(ctx, output, start_string, time_range_string, rpc_url):
     else:
         assert False
 
+    prefetched = get_prefetched_blocks(output)
+
     num = end_block_number - start_block_number
     l.log(f"fetching {num} blocks from #{start_block_number} to #{end_block_number}...")
 
     with l.ProgressPrinter(num) as p:
         for n in range(start_block_number, end_block_number):
+            if n in prefetched:
+                continue
             p.update(n - start_block_number)
             block = fetch_block(n, rpc_url=rpc_url)
             file_path = os.path.join(output, f"{n}.json")
@@ -94,6 +98,18 @@ def parse_range(s):
         return None
     seconds = magnitude * units[unit]
     return datetime.timedelta(seconds=seconds)
+
+
+def get_prefetched_blocks(d):
+    prefetched = set()
+    regex = re.compile(r"^(\d+).json$")
+    for p in os.listdir(d):
+        m = regex.match(p)
+        if m is None:
+            continue
+        (block_number,) = m.groups()
+        prefetched.add(int(block_number))
+    return prefetched
 
 
 def fetch_block(n, rpc_url):
@@ -155,9 +171,6 @@ def fetch_block_at_time(t, rpc_url):
             b1_n = b_n
             b1_t = b_t
 
-    print("success")
-    print(b0_t, t, b1_t)
-    print(b0_n, b1_n)
     return b0
 
 
