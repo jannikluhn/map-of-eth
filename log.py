@@ -5,6 +5,24 @@ def log(m):
     print(m, file=sys.stderr)
 
 
+def progress(i, n):
+    return f"{i}/{n} ({i / n * 100:.1f}%)"
+
+
+class Line:
+    def __enter__(self):
+        return self
+
+    def write(self, s):
+        print("\r" + s + "\033[K", end="", file=sys.stderr)
+
+    def next(self, s):
+        print("\n" + s, file=sys.stderr)
+
+    def __exit__(self, _1, _2, _3):
+        print("", end="\n", file=sys.stderr)
+
+
 class ProgressPrinter:
     def __init__(self, n):
         self.n = n
