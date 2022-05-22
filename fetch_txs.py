@@ -1,11 +1,13 @@
-import click
 import csv
 import datetime
-import dateparser
 import json
 import os
 import re
+
+import click
+import dateparser
 import requests
+
 import log as l
 
 BLOCK_INTERVAL = 13

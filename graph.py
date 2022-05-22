@@ -1,10 +1,12 @@
-import click
 import collections
 import itertools
 import json
 import pathlib
 import random
+
+import click
 import networkx as nx
+
 import log as l
 
 
