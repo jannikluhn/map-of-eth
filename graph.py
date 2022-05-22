@@ -9,7 +9,6 @@ import log as l
 
 
 EDGE_PROBABILITY = 0.3
-PRUNE_WEIGHT = 1
 DEFAULT_NODE_ATTRS = {
     "label": "",
     "shape": "circle",
@@ -90,28 +89,8 @@ def create_contract_graph(blocks):
         edges_per_node = len(edge_dict) / len(node_dict)
         line.write(f"created {len(edge_dict)} edges ({edges_per_node:.1f} per node)")
 
-    # l.log("pruning light edges...")
-    # edges_to_prune = []
-    # with l.Line() as line:
-    #     num_edges_unpruned = len(edge_dict)
-    #     for i, (edge, (_, _, attrs)) in enumerate(edge_dict.items()):
-    #         line.write(f"searching edges ({l.progress(i, len(edge_dict))})")
-    #         if attrs["weight"] <= 1:
-    #             edges_to_prune.append(edge)
-    #     for i, edge in enumerate(edges_to_prune):
-    #         line.write(f"pruning edges ({l.progress(i, len(edges_to_prune))})")
-    #         edge_dict.pop(edge)
-    #     line.write(f"pruned {len(edges_to_prune)} of {num_edges_unpruned} edges")
-
     l.log("created graph")
     return node_dict, edge_dict
-
-    # l.log("creating graph...")
-    # g = nx.Graph()
-    # g.add_nodes_from(node_set, label="", shape="circle")
-    # g.add_edges_from(edge_dict.values())
-
-    # return g
 
 
 def store_graph(nodes, edges, path):
@@ -132,48 +111,6 @@ def store_graph(nodes, edges, path):
 def stringify_attrs(attrs):
     attrs_strings = [f'{k}="{v}"' for k, v in attrs.items()]
     return "[" + ", ".join(attrs_strings) + "]"
-
-
-def create_call_graph(blocks):
-    node_set = set()
-    edge_dict = collections.defaultdict(int)
-
-    l.log("creating edges from blocks...")
-    with l.ProgressPrinter(len(blocks)) as p:
-        for i, block in enumerate(blocks):
-            p.update(i)
-            for tx in block["transactions"]:
-                # ignore contract creations which don't have "to"
-                if "to" not in tx:
-                    continue
-
-                n1 = tx["from"]
-                n2 = tx["to"]
-                edge = tuple(sorted([n1, n2]))
-
-                node_set.add(n1)
-                node_set.add(n2)
-                edge_dict[edge] += 1
-
-        p.update(len(blocks))
-
-    edges = []
-    for (n1, n2), w in edge_dict.items():
-        edges.append((n1, n2, {"weight": w}))
-
-    l.log("creating graph...")
-    g = nx.Graph()
-    g.add_nodes_from(node_set, label="", shape="circle")
-    g.add_edges_from(edges)
-
-    # remove nodes with only one neighbor
-    # nodes_to_remove = set()
-    # for node in g.nodes:
-    #     if len(g[node]) <= 1:
-    #         nodes_to_remove.add(node)
-    # g.remove_nodes_from(nodes_to_remove)
-
-    return g
 
 
 if __name__ == "__main__":
