@@ -8,8 +8,12 @@ import networkx as nx
 import log as l
 
 
-EDGE_PROBABILITY = 1
+EDGE_PROBABILITY = 0.3
 PRUNE_WEIGHT = 1
+DEFAULT_NODE_ATTRS = {
+    "label": "",
+    "shape": "circle",
+}
 
 
 @click.command()
@@ -24,11 +28,8 @@ PRUNE_WEIGHT = 1
 @click.option("--output", "-o", default="-", type=click.File("w"), help="output file")
 def main(input_dir, output):
     blocks = load_blocks_lazy(input_dir)
-    # graph = create_contract_graph(blocks)
-    # nx.drawing.nx_pydot.write_dot(graph, output)
     nodes, edges = create_contract_graph(blocks)
-    dump_graph(nodes, edges, output)
-    # nx.drawing.nx_pydot.write_dot(graph, output)
+    store_graph(nodes, edges, output)
 
     l.log("done")
 
@@ -57,7 +58,8 @@ def create_contract_graph(blocks):
             for tx in block["transactions"]:
                 if "to" not in tx or tx["to"] is None:
                     continue  # ignore contract creations
-                if int(tx["gas"], 16) == 21000 or tx["input"] == "0x":
+                gas_used = int(tx["gas"], 16)
+                if gas_used == 21000 or tx["input"] == "0x":
                     continue  # ignore non-contract calls
                 sender = tx["from"]
                 receiver = tx["to"]
@@ -72,20 +74,20 @@ def create_contract_graph(blocks):
 
     l.log("creating edges...")
     edge_dict = {}
-    node_set = set()
+    node_dict = {}
     with l.Line() as line:
         for i, (_, contracts) in enumerate(interactions.items()):
             line.write(f"num edges: {len(edge_dict)}")
             for n1, n2 in itertools.combinations(contracts, 2):
                 if not random.random() < EDGE_PROBABILITY:
                     continue
-                node_set.add(n1)
-                node_set.add(n2)
+                node_dict[n1] = {}
+                node_dict[n2] = {}
                 edge = tuple(sorted([n1, n2]))
                 if edge not in edge_dict:
-                    edge_dict[edge] = (edge[0], edge[1], {"weight": 0})
-                edge_dict[edge][2]["weight"] += 1
-        edges_per_node = len(edge_dict) / len(node_set)
+                    edge_dict[edge] = {"weight": 0}
+                edge_dict[edge]["weight"] += 1
+        edges_per_node = len(edge_dict) / len(node_dict)
         line.write(f"created {len(edge_dict)} edges ({edges_per_node:.1f} per node)")
 
     # l.log("pruning light edges...")
@@ -102,7 +104,7 @@ def create_contract_graph(blocks):
     #     line.write(f"pruned {len(edges_to_prune)} of {num_edges_unpruned} edges")
 
     l.log("created graph")
-    return node_set, edge_dict
+    return node_dict, edge_dict
 
     # l.log("creating graph...")
     # g = nx.Graph()
@@ -112,16 +114,24 @@ def create_contract_graph(blocks):
     # return g
 
 
-def dump_graph(nodes, edges, path):
-    l.log("dumping graph")
+def store_graph(nodes, edges, path):
+    l.log("writing graph to file")
     with path.open() as f:
         f.write("strict graph {\n")
-        for n in nodes:
-            f.write(f'"{n}" [label="", shape=circle];\n')
-        for n1, n2, attrs in edges.values():
-            attr_str = ", ".join([f'{k}="{v}"' for k, v in attrs.items()])
-            f.write(f'"{n1}" -- "{n2}"  [{attr_str}];\n')
+        for n, attrs in nodes.items():
+            attrs = {
+                **DEFAULT_NODE_ATTRS,
+                **attrs,
+            }
+            f.write(f'"{n}" {stringify_attrs(attrs)};\n')
+        for (n1, n2), attrs in edges.items():
+            f.write(f'"{n1}" -- "{n2}"  {stringify_attrs(attrs)};\n')
         f.write("}")
+
+
+def stringify_attrs(attrs):
+    attrs_strings = [f'{k}="{v}"' for k, v in attrs.items()]
+    return "[" + ", ".join(attrs_strings) + "]"
 
 
 def create_call_graph(blocks):
