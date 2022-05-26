@@ -24,4 +24,5 @@ edge weights into account).
 ![graph](/example/graph.png)
 
 Input data is one day of transactions (1130101 transactions in 5971 blocks from 14795323 to
-14801293 on May 18th, 2022).
+14801293 on May 18th, 2022). The corresponding Gephi file can be found
+[in the example directory](/example/example.gephi).
