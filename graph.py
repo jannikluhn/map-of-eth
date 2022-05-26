@@ -3,6 +3,7 @@ import itertools
 import json
 import pathlib
 import random
+import dot
 
 import click
 import networkx as nx
@@ -30,7 +31,7 @@ DEFAULT_NODE_ATTRS = {
 def main(input_dir, output):
     blocks = load_blocks_lazy(input_dir)
     nodes, edges = create_contract_graph(blocks)
-    store_graph(nodes, edges, output)
+    dot.store_graph(nodes, edges, output)
 
     l.log("done")
 
@@ -93,26 +94,6 @@ def create_contract_graph(blocks):
 
     l.log("created graph")
     return node_dict, edge_dict
-
-
-def store_graph(nodes, edges, path):
-    l.log("writing graph to file")
-    with path.open() as f:
-        f.write("strict graph {\n")
-        for n, attrs in nodes.items():
-            attrs = {
-                **DEFAULT_NODE_ATTRS,
-                **attrs,
-            }
-            f.write(f'"{n}" {stringify_attrs(attrs)};\n')
-        for (n1, n2), attrs in edges.items():
-            f.write(f'"{n1}" -- "{n2}"  {stringify_attrs(attrs)};\n')
-        f.write("}")
-
-
-def stringify_attrs(attrs):
-    attrs_strings = [f'{k}="{v}"' for k, v in attrs.items()]
-    return "[" + ", ".join(attrs_strings) + "]"
 
 
 if __name__ == "__main__":
