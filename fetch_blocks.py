@@ -21,7 +21,16 @@ units = {
 }
 
 
-@click.command()
+@click.command(
+    help="""Download a range of blocks from an Ethereum JSON RPC server.
+
+The blocks are written to the output directory in the format n.json where n is the block number.
+
+The set of blocks is given by a start time (--start, e.g. 2022-01-01) and a duration (--range).
+The range can be given in units of seconds (s), minutes (m), hours (h), days (d), weeks (w) or
+blocks (b or no unit), e.g. 2h or 100.
+"""
+)
 @click.option(
     "--output",
     "-o",
