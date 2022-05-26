@@ -9,7 +9,16 @@ import log as l
 COLUMN_NAMES = ["block_number", "tx_index", "from", "to", "gas"]
 
 
-@click.command()
+@click.command(
+    help="""Extract account interactions from a set of blocks.
+
+The input directory must contain JSON encoded blocks (one block per file), including transactions.
+The output is a CSV file with columns "block_number", "tx_index", "from", "to" and "gas".
+
+Note that only direct interactions between EOA and contract accounts are counted as the input data
+contains no information about internal message calls.
+"""
+)
 @click.option(
     "--input",
     "-i",

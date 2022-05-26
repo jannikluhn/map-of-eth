@@ -10,7 +10,23 @@ GAS_CUTOFF = 0.2
 ADDRESS_DTYPE = "|U42"
 
 
-@click.command()
+@click.command(
+    help="""Create a contract graph.
+
+The input must be a CSV file containing a list of account interactions. It must at least have the
+columns "from", "to", and "gas". The resulting graph is written to the output file (or stdout by
+default) in DOT format for further processing.
+
+The graph is constructed as follows: Each node represents one contract. Nodes are connected by an
+edge if there is at least one EOA account that interacted with both contracts in the input data.
+The edge is weighted by the number of accounts with these pairwise interactions.
+
+To reduce the data size, only 80% of total gas usage is represented in the diagram. This is
+achieved by disregarding the contracts that used the least amount of gas.
+
+A "width" attribute is attached to each node representing the square root of the gas usage in
+millions of gas."""
+)
 @click.option(
     "--input",
     "-i",

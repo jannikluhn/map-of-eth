@@ -3,11 +3,11 @@ import itertools
 import json
 import pathlib
 import random
-import dot
 
 import click
 import networkx as nx
 
+import dot
 import log as l
 
 
@@ -18,7 +18,19 @@ DEFAULT_NODE_ATTRS = {
 }
 
 
-@click.command()
+@click.command(
+    help="""Create a contract graph.
+
+The input directory must contain JSON encoded blocks (one block per file) with fully populated
+transaction fields. The resulting graph is written to the output file (or stdout by default) in
+DOT format for further processing.
+
+The graph is constructed as follows: Each node represents one contract. Nodes are connected by an
+edge if there is at least one EOA account that interacted with both contracts in the input data.
+The edge is weighted by the number of accounts with these pairwise interactions.
+
+To reduce the data size, pairwise interactions are only counted with a probability of 30%."""
+)
 @click.option(
     "--input",
     "-i",
