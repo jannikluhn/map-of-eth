@@ -42,7 +42,7 @@ blocks (b or no unit), e.g. 2h or 100.
 @click.option(
     "--range", "-r", "time_range_string", default="1d", help="time span to scrape"
 )
-@click.option("--rpc-url", "-r", envvar="ETH_RPC_URL", help="Ethereum JSON RPC URL")
+@click.option("--rpc-url", "-u", envvar="ETH_RPC_URL", help="Ethereum JSON RPC URL")
 @click.pass_context
 def main(ctx, output, start_string, time_range_string, rpc_url):
     """Fetch the hashes of all transactions in a range of blocks."""
