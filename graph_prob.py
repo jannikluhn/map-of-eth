@@ -5,7 +5,6 @@ import pathlib
 import random
 
 import click
-import networkx as nx
 
 import dot
 import log as l
